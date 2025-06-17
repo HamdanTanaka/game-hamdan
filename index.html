@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Game Memori Gambar</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background: url('background.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            backdrop-filter: brightness(0.4);
+            z-index: -1;
+        }
+
+        .game-board {
+            display: grid;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .card {
+            width: 80px;
+            height: 80px;
+            perspective: 1000px;
+            cursor: pointer;
+        }
+
+        .card-inner {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+        }
+
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+            font-size: 24px;
+        }
+
+        .card-front {
+            background: #444;
+        }
+
+        .card-back {
+            transform: rotateY(180deg);
+            background: white;
+        }
+
+        .card-back img {
+            width: 100%;
+            height: 100%;
+            border-radius: 10px;
+        }
+
+        .btn-reset {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #00c6ff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .music-button {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.8);
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        #loginScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 1000;
+            color: white;
+        }
+
+        #loginScreen input {
+            padding: 10px;
+            margin: 10px;
+            font-size: 1em;
+            border-radius: 5px;
+            border: none;
+        }
+
+        #loginScreen button {
+            padding: 10px 20px;
+            background-color: #00c6ff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #logoutBtn {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.8);
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .confetti {
+            position: fixed;
+            top: 0;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: fall linear forwards;
+        }
+
+@keyframes fall {
+            to {
+                transform: translateY(100vh);
+                opacity: 0;
+            }
+        }
+
+        /* Konfirmasi Logout */
+        .confirm-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .confirm-box {
+            background-color: white;
+            color: black;
+            padding: 20px 30px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .confirm-box button {
+            margin: 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            background-color: #00c6ff;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Login Screen -->
+    <div id="loginScreen">
+        <h2>Selamat Datang di Game Memori Gambar!</h2>
+        <p>
+            Silakan masukkan nama kamu dulu ya 😊
+        </p>
+        <input type="text" id="usernameInput" placeholder="Nama kamu..." />
+        <button onclick="login()">Mulai</button>
+    </div>
+
+    <!-- Konfirmasi Logout -->
+    <div id="logoutConfirm" style="display:none;" class="confirm-modal">
+        <div class="confirm-box">
+            <p>
+                Apakah kamu yakin ingin keluar?
+            </p>
+            <button onclick="confirmLogout(true)">Ya</button>
+            <button onclick="confirmLogout(false)">Tidak</button>
+        </div>
+    </div>
+
+    <button id="logoutBtn" onclick="logout()" style="display:none;">Keluar</button>
+    <audio id="bgMusic" src="music.mp3" loop></audio>
+    <button class="music-button" id="musicButton">🔇</button>
+
+    <h1 class="judul">Game Memori Gambar</h1>
+    <div id="score">
+        Poin: 0
+    </div>
+
+    <div>
+        <label for="difficulty" style="font-weight:bold; color:white;">Pilih Tingkat Kesulitan: </label>
+        <select id="difficulty" onchange="startGame()" style="padding: 5px; border-radius: 5px;">
+            <option value="easy">Easy (4 pasang)</option>
+            <option value="medium" selected>Medium (8 pasang)</option>
+            <option value="hard">Hard (12 pasang)</option>
+        </select>
+    </div>
+
+    <div class="game-board" id="gameBoard"></div>
+    <p id="message"></p>
+    <button class="btn-reset" onclick="window.location.reload()">Main Lagi</button>
+
+    <footer>
+        &copy; 2025 M.Hamdan Alawi XI RPL
+    </footer>
+
+    <script>
+        const imagePaths = [
+            'meme 1.jpg', 'meme 2.jpg', 'meme 3.jpg', 'meme 4.jpg',
+            'meme 5.jpg', 'meme 6.jpg', 'meme 7.jpg', 'meme 8.jpg',
+            'meme 9.jpg', 'meme 10.jpg', 'meme 11.jpg', 'meme 12.jpg'
+        ];
+
+        const board = document.getElementById('gameBoard');
+        const scoreDisplay = document.getElementById('score');
+        const messageDisplay = document.getElementById('message');
+        const difficultySelect = document.getElementById('difficulty');
+        const music = document.getElementById('bgMusic');
+        const musicButton = document.getElementById('musicButton');
+
+        let flippedCards = [];
+        let matchedCount = 0;
+        let score = 0;
+        let totalPairs = 0;
+        let musicStarted = false;
+
+        document.body.addEventListener('click', () => {
+            if (!musicStarted) {
+                music.play().then(() => {
+                    musicStarted = true;
+                    music.muted = false;
+                    musicButton.innerText = '🔊';
+                }).catch(() => {});
+            }
+        }, {
+            once: true
+        });
+
+        musicButton.addEventListener('click', () => {
+            if (!musicStarted) {
+                music.play().then(() => {
+                    musicStarted = true;
+                    music.muted = false;
+                    musicButton.innerText = '🔊';
+                });
+            } else {
+                music.muted = !music.muted;
+                musicButton.innerText = music.muted ? '🔇': '🔊';
+            }
+        });
+
+        function login() {
+            const username = document.getElementById("usernameInput").value.trim();
+            if (username) {
+                document.getElementById("loginScreen").style.display = "none";
+                document.getElementById("logoutBtn").style.display = "block";
+                startGame();
+                alert(`Halo ${username}! Selamat bermain dan semoga beruntung 😄`);
+            } else {
+                alert("Masukkan nama dulu ya!");
+            }
+        }
+
+        function logout() {
+            document.getElementById("logoutConfirm").style.display = "flex";
+        }
+
+        function confirmLogout(yes) {
+            document.getElementById("logoutConfirm").style.display = "none";
+            if (yes) location.reload();
+        }
+
+        function startGame() {
+            board.innerHTML = '';
+            messageDisplay.innerText = '';
+            score = 0;
+            matchedCount = 0;
+            flippedCards = [];
+
+            const difficulty = difficultySelect.value;
+            let selectedImages = imagePaths.slice(0, difficulty === 'easy' ? 4: difficulty === 'medium' ? 8: 12);
+            totalPairs = selectedImages.length;
+
+            let cards = [...selectedImages,
+                ...selectedImages].sort(() => 0.5 - Math.random());
+            board.style.gridTemplateColumns = `repeat(${totalPairs <= 4 ? 4: totalPairs <= 8 ? 5: 6}, 80px)`;
+
+            cards.forEach((imgSrc, i) => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.style.animationDelay = (i * 0.05) + 's';
+                card.dataset.image = imgSrc;
+
+                const inner = document.createElement('div');
+                inner.className = 'card-inner';
+
+                const front = document.createElement('div');
+                front.className = 'card-front';
+                front.innerText = '?';
+
+                const back = document.createElement('div');
+                back.className = 'card-back';
+                const img = document.createElement('img');
+                img.src = imgSrc;
+                back.appendChild(img);
+
+                inner.appendChild(front);
+                inner.appendChild(back);
+                card.appendChild(inner);
+                card.addEventListener('click', flipCard);
+
+                board.appendChild(card);
+            });
+
+            scoreDisplay.innerText = 'Poin: 0';
+        }
+
+        function flipCard(e) {
+            const card = e.currentTarget;
+            if (card.classList.contains('flipped') || card.classList.contains('matched') || flippedCards.length === 2) return;
+
+            card.classList.add('flipped');
+            flippedCards.push(card);
+
+            if (flippedCards.length === 2) {
+                const [first,
+                    second] = flippedCards;
+                if (first.dataset.image === second.dataset.image) {
+                    first.classList.add('matched');
+                    second.classList.add('matched');
+                    matchedCount++;
+                    score += 10;
+                    flippedCards = [];
+
+                    if (matchedCount === totalPairs) {
+                        messageDisplay.innerHTML = "🎉 Selamat! Kamu berhasil mencocokkan semuanya!<br>Terima kasih sudah bermain, semoga harimu menyenangkan 😊";
+                        spawnConfetti(100);
+                    }
+                } else {
+                    score -= 2;
+                    setTimeout(() => {
+                        first.classList.remove('flipped');
+                        second.classList.remove('flipped');
+                        flippedCards = [];
+                    }, 1000);
+                }
+                scoreDisplay.innerText = 'Poin: ' + score;
+            }
+        }
+
+        function spawnConfetti(count) {
+            for (let i = 0; i < count; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.background = `hsl(${Math.random() * 360}, 70%, 60%)`;
+                confetti.style.animationDuration = 2 + Math.random() * 3 + 's';
+                document.body.appendChild(confetti);
+                setTimeout(() => confetti.remove(), 5000);
+            }
+        }
+    </script>
+</body>
+</html>
